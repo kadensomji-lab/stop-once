@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Stopwatch</title>
+
+  <!-- PWA: makes it launch full-screen like a native app on iPhone -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Stopwatch">
+  <meta name="theme-color" content="#0f0f0f">
+
+  <!-- Inline PWA manifest -->
+  <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Stopwatch%22%2C%22short_name%22%3A%22Stopwatch%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f0f0f%22%2C%22theme_color%22%3A%22%230f0f0f%22%7D">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #0f0f0f;
+      font-family: 'Courier New', monospace;
+      /* Safe area insets for iPhone notch/home bar */
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    .days {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #aaa;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      height: 28px;
+      transition: opacity 0.4s;
+    }
+
+    .days.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .timer {
+      font-size: 6rem;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: 4px;
+      margin-bottom: 12px;
+      transition: color 0.3s;
+    }
+
+    @media (max-width: 420px) {
+      .timer {
+        font-size: 4.2rem;
+        letter-spacing: 2px;
+      }
+    }
+
+    .timer.stopped {
+      color: #ff4444;
+    }
+
+    .label {
+      font-size: 1rem;
+      color: #666;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+      height: 24px;
+    }
+
+    .label.failed-msg {
+      color: #ff4444;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 16px 40px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    #failBtn {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    #failBtn:hover {
+      background: #ff2222;
+    }
+
+    #failBtn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #restartBtn {
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    #restartBtn:hover {
+      background: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="days hidden" id="days">Days: 0</div>
+    <div class="timer" id="timer">00:00:00</div>
+    <div class="label" id="label">running</div>
+    <div class="buttons">
+      <button id="failBtn">Failed</button>
+      <button id="restartBtn">Start Over</button>
+    </div>
+  </div>
+
+  <script>
+    const timerEl   = document.getElementById('timer');
+    const labelEl   = document.getElementById('label');
+    const daysEl    = document.getElementById('days');
+    const failBtn   = document.getElementById('failBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    let startTime = Date.now();
+    let rafId = null;
+    let days = 0;
+
+    function pad(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function format(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const hours   = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    }
+
+    function tick() {
+      const elapsed = Date.now() - startTime;
+
+      if (elapsed >= DAY_MS) {
+        days += 1;
+        startTime = Date.now();
+        daysEl.textContent = `Days: ${days}`;
+        daysEl.classList.remove('hidden');
+      }
+
+      timerEl.textContent = format(Date.now() - startTime);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function stop() {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+      timerEl.classList.add('stopped');
+      labelEl.textContent = 'failed';
+      labelEl.classList.add('failed-msg');
+      failBtn.disabled = true;
+    }
+
+    function restart() {
+      cancelAnimationFrame(rafId);
+      days = 0;
+      startTime = Date.now();
+      timerEl.classList.remove('stopped');
+      timerEl.textContent = '00:00:00';
+      labelEl.textContent = 'running';
+      labelEl.classList.remove('failed-msg');
+      daysEl.textContent = 'Days: 0';
+      daysEl.classList.add('hidden');
+      failBtn.disabled = false;
+      rafId = requestAnimationFrame(tick);
+    }
+
+    failBtn.addEventListener('click', stop);
+    restartBtn.addEventListener('click', restart);
+
+    rafId = requestAnimationFrame(tick);
+  </script>
+</body>
+</html>
