@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Stopwatch</title>
+
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="Stopwatch">
+  <meta name="theme-color" content="#0f0f0f">
+
+  <link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Stopwatch%22%2C%22short_name%22%3A%22Stopwatch%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f0f0f%22%2C%22theme_color%22%3A%22%230f0f0f%22%7D">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: #0f0f0f;
+      font-family: 'Courier New', monospace;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ── Auth screen ── */
+    .auth-wrap {
+      text-align: center;
+      width: 100%;
+      max-width: 320px;
+      padding: 0 24px;
+    }
+
+    .auth-wrap h1 {
+      font-size: 2rem;
+      color: #fff;
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-bottom: 40px;
+    }
+
+    .auth-wrap input {
+      display: block;
+      width: 100%;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 4px;
+      color: #fff;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      outline: none;
+      transition: border-color 0.2s;
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    .auth-wrap input:focus {
+      border-color: #666;
+    }
+
+    .auth-wrap input::placeholder {
+      color: #444;
+    }
+
+    .auth-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .auth-buttons button {
+      flex: 1;
+      padding: 14px 0;
+      font-size: 0.85rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .auth-buttons button:active {
+      transform: scale(0.97);
+    }
+
+    #loginBtn {
+      background: #fff;
+      color: #0f0f0f;
+    }
+
+    #signupBtn {
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    #loginBtn:hover { background: #ddd; }
+    #signupBtn:hover { background: #333; }
+
+    .auth-error {
+      margin-top: 16px;
+      font-size: 0.8rem;
+      letter-spacing: 1px;
+      color: #ff4444;
+      min-height: 20px;
+    }
+
+    /* ── App screen ── */
+    .app-wrap {
+      text-align: center;
+      width: 100%;
+    }
+
+    .user-bar {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 40px;
+    }
+
+    .user-bar span {
+      font-size: 0.75rem;
+      color: #555;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    #logoutBtn {
+      padding: 6px 14px;
+      font-size: 0.7rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: transparent;
+      color: #444;
+      border: 1px solid #333;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #logoutBtn:hover {
+      color: #888;
+      border-color: #555;
+    }
+
+    .days {
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #aaa;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      height: 28px;
+      transition: opacity 0.4s;
+    }
+
+    .days.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .timer {
+      font-size: 6rem;
+      font-weight: bold;
+      color: #fff;
+      letter-spacing: 4px;
+      margin-bottom: 12px;
+      transition: color 0.3s;
+    }
+
+    @media (max-width: 420px) {
+      .timer {
+        font-size: 4.2rem;
+        letter-spacing: 2px;
+      }
+    }
+
+    .timer.stopped {
+      color: #ff4444;
+    }
+
+    .label {
+      font-size: 1rem;
+      color: #666;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 48px;
+      height: 24px;
+    }
+
+    .label.failed-msg {
+      color: #ff4444;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+    }
+
+    .buttons button {
+      padding: 16px 40px;
+      font-size: 1rem;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .buttons button:active {
+      transform: scale(0.97);
+    }
+
+    #failBtn {
+      background: #ff4444;
+      color: #fff;
+    }
+
+    #failBtn:hover { background: #ff2222; }
+
+    #failBtn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #restartBtn {
+      background: #222;
+      color: #fff;
+      border: 1px solid #444;
+    }
+
+    #restartBtn:hover { background: #333; }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Auth screen -->
+  <div class="auth-wrap" id="authScreen">
+    <h1>Stopwatch</h1>
+    <input type="text"     id="usernameInput" placeholder="Username"  autocomplete="username"         spellcheck="false">
+    <input type="password" id="passwordInput" placeholder="Password"  autocomplete="current-password">
+    <div class="auth-buttons">
+      <button id="loginBtn">Login</button>
+      <button id="signupBtn">Sign Up</button>
+    </div>
+    <div class="auth-error" id="authError"></div>
+  </div>
+
+  <!-- App screen -->
+  <div class="app-wrap hidden" id="appScreen">
+    <div class="user-bar">
+      <span id="userLabel"></span>
+      <button id="logoutBtn">Logout</button>
+    </div>
+    <div class="days hidden" id="days">Days: 0</div>
+    <div class="timer" id="timer">00:00:00</div>
+    <div class="label" id="label">running</div>
+    <div class="buttons">
+      <button id="failBtn">Failed</button>
+      <button id="restartBtn">Start Over</button>
+    </div>
+  </div>
+
+  <script>
+    // ── Crypto helpers ──────────────────────────────────────────────
+    async function hashPassword(password) {
+      const enc = new TextEncoder();
+      const buf = await crypto.subtle.digest('SHA-256', enc.encode(password));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    // ── Storage helpers ─────────────────────────────────────────────
+    const STORE_KEY = username => `sw_user_${username.toLowerCase()}`;
+
+    function loadUser(username) {
+      try { return JSON.parse(localStorage.getItem(STORE_KEY(username))); }
+      catch { return null; }
+    }
+
+    function saveUser(username, data) {
+      localStorage.setItem(STORE_KEY(username), JSON.stringify(data));
+    }
+
+    // ── Auth UI ─────────────────────────────────────────────────────
+    const authScreen   = document.getElementById('authScreen');
+    const appScreen    = document.getElementById('appScreen');
+    const usernameInput = document.getElementById('usernameInput');
+    const passwordInput = document.getElementById('passwordInput');
+    const loginBtn     = document.getElementById('loginBtn');
+    const signupBtn    = document.getElementById('signupBtn');
+    const authError    = document.getElementById('authError');
+    const userLabel    = document.getElementById('userLabel');
+    const logoutBtn    = document.getElementById('logoutBtn');
+
+    function showError(msg) { authError.textContent = msg; }
+    function clearError()   { authError.textContent = ''; }
+
+    async function handleLogin() {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      if (!username || !password) { showError('Enter username and password.'); return; }
+
+      const stored = loadUser(username);
+      if (!stored) { showError('Account not found. Sign up first.'); return; }
+
+      const hash = await hashPassword(password);
+      if (hash !== stored.passwordHash) { showError('Wrong password.'); return; }
+
+      clearError();
+      enterApp(username, stored);
+    }
+
+    async function handleSignup() {
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      if (!username || !password) { showError('Enter username and password.'); return; }
+      if (username.length < 2)    { showError('Username too short.'); return; }
+      if (password.length < 4)    { showError('Password must be at least 4 chars.'); return; }
+
+      const existing = loadUser(username);
+      if (existing) { showError('Username taken. Choose another.'); return; }
+
+      const hash = await hashPassword(password);
+      const data = {
+        passwordHash: hash,
+        streakStart: Date.now(),
+        failed: false,
+        failedAt: null
+      };
+      saveUser(username, data);
+      clearError();
+      enterApp(username, data);
+    }
+
+    loginBtn.addEventListener('click', handleLogin);
+    signupBtn.addEventListener('click', handleSignup);
+
+    passwordInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+      currentUser = null;
+      authScreen.classList.remove('hidden');
+      appScreen.classList.add('hidden');
+      passwordInput.value = '';
+      clearError();
+    });
+
+    // ── Stopwatch logic ─────────────────────────────────────────────
+    const timerEl    = document.getElementById('timer');
+    const labelEl    = document.getElementById('label');
+    const daysEl     = document.getElementById('days');
+    const failBtn    = document.getElementById('failBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    let currentUser = null;
+    let rafId = null;
+
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    function formatMs(ms) {
+      const total   = Math.floor(ms / 1000);
+      const hours   = Math.floor(total / 3600);
+      const minutes = Math.floor((total % 3600) / 60);
+      const seconds = total % 60;
+      return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+    }
+
+    function persistState() {
+      if (!currentUser) return;
+      const stored = loadUser(currentUser);
+      if (!stored) return;
+      stored.streakStart = streakStart;
+      stored.failed      = failed;
+      stored.failedAt    = failedAt;
+      saveUser(currentUser, stored);
+    }
+
+    let streakStart = 0;
+    let failed      = false;
+    let failedAt    = null;
+
+    function tick() {
+      const elapsed = Date.now() - streakStart;
+      const days    = Math.floor(elapsed / DAY_MS);
+      const timeMs  = elapsed % DAY_MS;
+
+      if (days > 0) {
+        daysEl.textContent = `Days: ${days}`;
+        daysEl.classList.remove('hidden');
+      } else {
+        daysEl.classList.add('hidden');
+      }
+
+      timerEl.textContent = formatMs(timeMs);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function renderFailed() {
+      cancelAnimationFrame(rafId);
+      rafId = null;
+
+      const elapsed = (failedAt || Date.now()) - streakStart;
+      const days    = Math.floor(elapsed / DAY_MS);
+      const timeMs  = elapsed % DAY_MS;
+
+      if (days > 0) {
+        daysEl.textContent = `Days: ${days}`;
+        daysEl.classList.remove('hidden');
+      } else {
+        daysEl.classList.add('hidden');
+      }
+
+      timerEl.textContent = formatMs(timeMs);
+      timerEl.classList.add('stopped');
+      labelEl.textContent = 'failed';
+      labelEl.classList.add('failed-msg');
+      failBtn.disabled = true;
+    }
+
+    function enterApp(username, data) {
+      currentUser  = username;
+      streakStart  = data.streakStart || Date.now();
+      failed       = data.failed      || false;
+      failedAt     = data.failedAt    || null;
+
+      userLabel.textContent = username;
+      authScreen.classList.add('hidden');
+      appScreen.classList.remove('hidden');
+
+      // Reset display state
+      timerEl.classList.remove('stopped');
+      labelEl.classList.remove('failed-msg');
+      failBtn.disabled = false;
+      labelEl.textContent = 'running';
+
+      cancelAnimationFrame(rafId);
+
+      if (failed) {
+        renderFailed();
+      } else {
+        rafId = requestAnimationFrame(tick);
+      }
+    }
+
+    failBtn.addEventListener('click', () => {
+      failed   = true;
+      failedAt = Date.now();
+      persistState();
+      renderFailed();
+    });
+
+    restartBtn.addEventListener('click', () => {
+      failed      = false;
+      failedAt    = null;
+      streakStart = Date.now();
+      persistState();
+
+      timerEl.classList.remove('stopped');
+      timerEl.textContent = '00:00:00';
+      labelEl.textContent = 'running';
+      labelEl.classList.remove('failed-msg');
+      daysEl.textContent = 'Days: 0';
+      daysEl.classList.add('hidden');
+      failBtn.disabled = false;
+
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(tick);
+    });
+  </script>
+</body>
+</html>
